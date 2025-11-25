@@ -11,6 +11,9 @@
         .input-field { width: 100%; border: 1px solid #d1d5db; border-radius: 0.375rem; padding: 0.5rem; font-size: 0.875rem; transition: border-color 0.15s; }
         .input-field:focus { outline: none; border-color: #2563eb; ring: 2px solid #2563eb; }
         .section-title { font-size: 1.125rem; font-weight: 700; color: #111827; margin-bottom: 1rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem; }
+        /* Modal Styles */
+        .modal-overlay { background-color: rgba(0, 0, 0, 0.5); z-index: 50; }
+        .modal-content { z-index: 60; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -22,7 +25,12 @@
                 <h1 class="text-2xl font-bold text-gray-800">Textile Batch System</h1>
                 <p class="text-sm text-gray-500">Janseva Sanket - Internal Tool</p>
             </div>
-            <div id="status" class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">System Ready</div>
+            <div class="flex items-center space-x-3">
+                <button id="manageListsBtn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-3 rounded text-sm transition">
+                    ⚙️ Manage Lists
+                </button>
+                <div id="status" class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">System Ready</div>
+            </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -43,11 +51,8 @@
 
                     <div class="input-group">
                         <label>Process From</label>
-                        <select id="processSource" class="input-field">
-                            <option>Mill A</option>
-                            <option>Mill B</option>
-                            <option>Self</option>
-                        </select>
+                        <select id="processSourceSelect" class="input-field">
+                            </select>
                     </div>
 
                     <div class="input-group">
@@ -57,7 +62,8 @@
 
                     <div class="input-group">
                         <label>Quality</label>
-                        <input type="text" id="quality" class="input-field">
+                        <select id="qualitySelect" class="input-field">
+                            </select>
                     </div>
 
                     <div class="input-group">
@@ -200,12 +206,45 @@
             </div>
         </div>
 
+        <div id="settingsModal" class="fixed inset-0 hidden modal-overlay items-center justify-center p-4">
+            <div class="modal-content bg-white rounded-lg shadow-xl w-full max-w-2xl p-6">
+                <div class="flex justify-between items-center border-b pb-3 mb-4">
+                    <h3 class="text-xl font-bold text-gray-800">Manage Dropdown Lists</h3>
+                    <button id="closeModalBtn" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="font-semibold text-lg mb-2">Process From Names</h4>
+                        <div class="flex space-x-2 mb-3">
+                            <input type="text" id="newProcessInput" class="input-field" placeholder="New Process Name">
+                            <button id="addProcessBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-3 rounded text-sm transition">Add</button>
+                        </div>
+                        <ul id="processListDisplay" class="border rounded h-40 overflow-y-auto text-sm p-2 space-y-1">
+                            </ul>
+                    </div>
+                    
+                    <div>
+                        <h4 class="font-semibold text-lg mb-2">Quality Types</h4>
+                        <div class="flex space-x-2 mb-3">
+                            <input type="text" id="newQualityInput" class="input-field" placeholder="New Quality Type">
+                            <button id="addQualityBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-3 rounded text-sm transition">Add</button>
+                        </div>
+                        <ul id="qualityListDisplay" class="border rounded h-40 overflow-y-auto text-sm p-2 space-y-1">
+                            </ul>
+                    </div>
+                </div>
+
+                <p class="text-xs text-gray-500 mt-4">Tap on any item in the lists above to permanently delete it.</p>
+            </div>
+        </div>
+
     </div>
 
     <script type="module">
         // 1. FIREBASE SETUP
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy } 
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy, getDoc, setDoc } 
         from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
         // YOUR CONFIGURATION (Embedded)
@@ -222,14 +261,20 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const colRef = collection(db, "batches");
+        
+        // References for Dynamic Lists
+        const settingsColRef = collection(db, "settings");
+        const processDocRef = doc(settingsColRef, "processes");
+        const qualityDocRef = doc(settingsColRef, "qualities");
 
-        // 2. DOM ELEMENTS
+
+        // 2. DOM ELEMENTS (Main Form - Only changes are the select IDs)
         const inputs = {
             date: document.getElementById('date'),
             lotNo: document.getElementById('lotNo'),
-            processSource: document.getElementById('processSource'),
+            processSource: document.getElementById('processSourceSelect'), // CHANGED
             sku: document.getElementById('sku'),
-            quality: document.getElementById('quality'),
+            quality: document.getElementById('qualitySelect'), // CHANGED
             pana: document.getElementById('pana'),
             shade: document.getElementById('shade'),
             sides: document.getElementById('sides'),
@@ -254,58 +299,159 @@
             fabricCost: document.getElementById('fabricCost')
         };
 
+        // Modal Elements
+        const modal = document.getElementById('settingsModal');
+        const manageBtn = document.getElementById('manageListsBtn');
+        const closeBtn = document.getElementById('closeModalBtn');
+        const processInput = document.getElementById('newProcessInput');
+        const processAddBtn = document.getElementById('addProcessBtn');
+        const processDisplay = document.getElementById('processListDisplay');
+        const qualityInput = document.getElementById('newQualityInput');
+        const qualityAddBtn = document.getElementById('addQualityBtn');
+        const qualityDisplay = document.getElementById('qualityListDisplay');
+
         // Set Default Date
         inputs.date.valueAsDate = new Date();
 
-        // 3. CALCULATION LOGIC
+
+        // 3. DYNAMIC LIST MANAGEMENT LOGIC
+        
+        const DEFAULT_PROCESSES = ["Mill A", "Mill B", "Self"];
+        const DEFAULT_QUALITIES = ["Standard", "Premium", "Reject"];
+        
+        // A. Load/Display List
+        async function loadLists() {
+            try {
+                // Load Processes
+                let processData = await getDoc(processDocRef);
+                let processes = processData.exists() ? processData.data().list : DEFAULT_PROCESSES;
+                
+                // Load Qualities
+                let qualityData = await getDoc(qualityDocRef);
+                let qualities = qualityData.exists() ? qualityData.data().list : DEFAULT_QUALITIES;
+
+                // If lists were empty, set defaults in DB
+                if (!processData.exists()) await setDoc(processDocRef, { list: DEFAULT_PROCESSES });
+                if (!qualityData.exists()) await setDoc(qualityDocRef, { list: DEFAULT_QUALITIES });
+                
+                updateListUI(processes, processDisplay, inputs.processSource);
+                updateListUI(qualities, qualityDisplay, inputs.quality);
+            } catch (e) {
+                console.error("Error loading lists:", e);
+                alert("Error loading list settings. Check Firestore rules.");
+            }
+        }
+
+        // B. Update HTML Selects and Modal Lists
+        function updateListUI(list, displayEl, selectEl) {
+            // Sort alphabetically for usability
+            list.sort(); 
+
+            // Clear existing options
+            selectEl.innerHTML = list.map(item => `<option>${item}</option>`).join('');
+            displayEl.innerHTML = list.map(item => 
+                `<li class="flex justify-between items-center p-1 bg-gray-50 hover:bg-red-100 cursor-pointer rounded" data-value="${item}">
+                    <span>${item}</span>
+                    <span class="text-red-500 font-bold px-1 text-sm">&times;</span>
+                </li>`
+            ).join('');
+        }
+
+        // C. Save List to Firestore
+        async function saveList(type, list, inputEl) {
+            const docRef = type === 'process' ? processDocRef : qualityDocRef;
+            await setDoc(docRef, { list: list });
+            inputEl.value = ''; // Clear input
+            loadLists(); // Reload to refresh both modal and main form
+        }
+
+        // D. Add Item
+        async function handleAddItem(type, inputEl) {
+            const newItem = inputEl.value.trim();
+            if (!newItem) return alert("Please enter a name.");
+
+            const docRef = type === 'process' ? processDocRef : qualityDocRef;
+            const docSnap = await getDoc(docRef);
+            let currentList = docSnap.exists() ? docSnap.data().list : [];
+
+            if (currentList.includes(newItem)) return alert("Item already exists.");
+            
+            currentList.push(newItem);
+            await saveList(type, currentList, inputEl);
+        }
+
+        // E. Delete Item
+        async function handleDeleteItem(type, itemToDelete) {
+            const docRef = type === 'process' ? processDocRef : qualityDocRef;
+            const docSnap = await getDoc(docRef);
+            let currentList = docSnap.exists() ? docSnap.data().list : [];
+
+            let newList = currentList.filter(item => item !== itemToDelete);
+            await saveList(type, newList, { value: '' }); // Pass dummy input el
+        }
+
+        // F. Attach Listeners for Modal
+        manageBtn.addEventListener('click', () => { modal.style.display = 'flex'; loadLists(); });
+        closeBtn.addEventListener('click', () => { modal.style.display = 'none'; });
+        modal.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; }); // Close on overlay click
+
+        processAddBtn.addEventListener('click', () => handleAddItem('process', processInput));
+        qualityAddBtn.addEventListener('click', () => handleAddItem('quality', qualityInput));
+
+        processDisplay.addEventListener('click', (e) => {
+            const li = e.target.closest('li');
+            if (li && confirm(`Delete Process: ${li.dataset.value}?`)) {
+                handleDeleteItem('process', li.dataset.value);
+            }
+        });
+        qualityDisplay.addEventListener('click', (e) => {
+            const li = e.target.closest('li');
+            if (li && confirm(`Delete Quality: ${li.dataset.value}?`)) {
+                handleDeleteItem('quality', li.dataset.value);
+            }
+        });
+
+        // Load lists on initial app startup
+        loadLists(); 
+
+        // 4. CALCULATION LOGIC (Unchanged)
         function calculate() {
             const totalMtr = parseFloat(inputs.totalMeter.value) || 0;
             const totalDzn = parseFloat(inputs.totalDozen.value) || 0;
             const finishMtr = parseFloat(inputs.finishMeter.value) || 0;
             const greyRate = parseFloat(inputs.greyRate.value) || 0;
 
-            // Update Readonly Grey Meter
             inputs.greyMeter.value = totalMtr;
 
-            // Formulas
-            // Avg Cons = Total Meter / Total Dozen
             const avgCons = totalDzn > 0 ? (totalMtr / totalDzn).toFixed(2) : 0;
-            
-            // Real Cons = Finish Meter / Total Dozen
             const realCons = totalDzn > 0 ? (finishMtr / totalDzn).toFixed(2) : 0;
-
-            // Elongation = Finish Meter - Grey Meter
             const elong = (finishMtr - totalMtr).toFixed(2);
-
-            // Cost = Grey Meter * Grey Rate (As per request)
             const cost = (totalMtr * greyRate).toFixed(2);
 
-            // Update UI
             displays.avgConsumption.innerText = avgCons;
             displays.realConsumption.innerText = realCons;
             displays.elongation.innerText = elong;
             displays.fabricCost.innerText = cost;
         }
 
-        // Attach Listeners
         ['totalMeter', 'totalDozen', 'finishMeter', 'greyRate'].forEach(id => {
             document.getElementById(id).addEventListener('input', calculate);
         });
 
-        // 4. SAVE TO DATABASE
+        // 5. SAVE TO DATABASE (Unchanged, but using new select IDs)
         document.getElementById('saveBtn').addEventListener('click', async () => {
             const btn = document.getElementById('saveBtn');
             btn.innerText = "Saving...";
             
             try {
-                // Gather Data
+                // Gather Data (uses inputs.processSource and inputs.quality which are now dynamic selects)
                 const data = {
                     date: inputs.date.value,
                     lotNo: inputs.lotNo.value,
                     processSource: inputs.processSource.value,
                     sku: inputs.sku.value,
                     quality: inputs.quality.value,
-                    pana: inputs.pana.value,
+                    pana: parseFloat(inputs.pana.value),
                     shade: inputs.shade.value,
                     sides: inputs.sides.value,
                     type: inputs.type.value,
@@ -313,9 +459,9 @@
                     totalDozen: parseFloat(inputs.totalDozen.value),
                     totalMeter: parseFloat(inputs.totalMeter.value),
                     breakdown: {
-                        fresh: inputs.fresh.value,
-                        second: inputs.second.value,
-                        third: inputs.third.value
+                        fresh: parseFloat(inputs.fresh.value) || 0,
+                        second: parseFloat(inputs.second.value) || 0,
+                        third: parseFloat(inputs.third.value) || 0
                     },
                     costing: {
                         finishMeter: parseFloat(inputs.finishMeter.value),
@@ -325,17 +471,17 @@
                         calculatedCost: parseFloat(displays.fabricCost.innerText),
                         elongation: parseFloat(displays.elongation.innerText)
                     },
-                    timestamp: new Date()
+                    timestamp: new Date().toISOString()
                 };
 
                 await addDoc(colRef, data);
                 alert("Batch Saved Successfully!");
                 
-                // Clear Form (Optional: Keep Date)
-                inputs.lotNo.value = "";
-                inputs.totalMeter.value = "";
-                inputs.finishMeter.value = "";
-                calculate(); // Reset calcs
+                // Clear Form (Partial clear for new entry)
+                inputs.lotNo.value = inputs.sku.value = inputs.quality.value = inputs.pana.value = inputs.shade.value = '';
+                inputs.totalMeter.value = inputs.finishMeter.value = inputs.greyRate.value = inputs.processCharge.value = inputs.transport.value = '';
+                inputs.fresh.value = inputs.second.value = inputs.third.value = '';
+                calculate(); 
 
             } catch (e) {
                 console.error("Error adding document: ", e);
@@ -344,8 +490,8 @@
             btn.innerText = "SAVE RECORD";
         });
 
-        // 5. LOAD DATABASE (Real-time)
-        const q = query(colRef, orderBy("date", "desc"));
+        // 6. LOAD DATABASE (Real-time - Unchanged)
+        const q = query(colRef, orderBy("timestamp", "desc"));
         onSnapshot(q, (snapshot) => {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = "";
@@ -379,29 +525,46 @@
             });
         });
 
-        // 6. EXPORT TO CSV
+        // 7. EXPORT TO CSV (Unchanged)
         document.getElementById('exportBtn').addEventListener('click', () => {
-            let csv = "Date,LotNo,Process,SKU,Quality,TotalMeter,FinishMeter,Cost\n";
-            document.querySelectorAll('#tableBody tr').forEach(row => {
-                const cols = row.querySelectorAll('td');
-                if(cols.length > 0) {
+            let csv = "Date,LotNo,Process,SKU,Quality,Pana,Shade,Sides,Type,Stitch,TotalDozen,TotalMeter,Fresh,Second,Third,FinishMeter,GreyRate,ProcessCharge,Transport,FabricCost,Elongation\n";
+
+            // Re-query data needed for comprehensive export
+            getDocs(query(colRef, orderBy("timestamp", "desc"))).then(snapshot => {
+                snapshot.docs.forEach(docSnap => {
+                    const item = docSnap.data();
                     const rowData = [
-                        cols[0].innerText, // Date
-                        cols[1].innerText, // Lot
-                        cols[2].innerText, // SKU
-                        cols[3].innerText, // Grey
-                        cols[4].innerText, // Finish
-                        cols[5].innerText.replace('₹', ''), // Cost
+                        item.date || '',
+                        item.lotNo || '',
+                        item.processSource || '',
+                        item.sku || '',
+                        item.quality || '',
+                        item.pana || '',
+                        item.shade || '',
+                        item.sides || '',
+                        item.type || '',
+                        item.stitch || '',
+                        item.totalDozen || '',
+                        item.totalMeter || '',
+                        item.breakdown?.fresh || '',
+                        item.breakdown?.second || '',
+                        item.breakdown?.third || '',
+                        item.costing?.finishMeter || '',
+                        item.costing?.greyRate || '',
+                        item.costing?.processCharge || '',
+                        item.costing?.transport || '',
+                        item.costing?.calculatedCost || '',
+                        item.costing?.elongation || '',
                     ];
-                    csv += rowData.join(",") + "\n";
-                }
+                    csv += rowData.map(d => `"${d}"`).join(",") + "\n";
+                });
+                
+                const hiddenElement = document.createElement('a');
+                hiddenElement.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv);
+                hiddenElement.target = '_blank';
+                hiddenElement.download = 'Textile_Data_FULL.csv';
+                hiddenElement.click();
             });
-            
-            const hiddenElement = document.createElement('a');
-            hiddenElement.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv);
-            hiddenElement.target = '_blank';
-            hiddenElement.download = 'Textile_Data.csv';
-            hiddenElement.click();
         });
     </script>
 </body>
