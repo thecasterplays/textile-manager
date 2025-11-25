@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Textile Batch Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; }
+        .input-group label { font-size: 0.75rem; font-weight: 600; color: #4b5563; text-transform: uppercase; letter-spacing: 0.05em; }
+        .input-field { width: 100%; border: 1px solid #d1d5db; border-radius: 0.375rem; padding: 0.5rem; font-size: 0.875rem; transition: border-color 0.15s; }
+        .input-field:focus { outline: none; border-color: #2563eb; ring: 2px solid #2563eb; }
+        .section-title { font-size: 1.125rem; font-weight: 700; color: #111827; margin-bottom: 1rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">Textile Batch System</h1>
+                <p class="text-sm text-gray-500">Janseva Sanket - Internal Tool</p>
+            </div>
+            <div id="status" class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">System Ready</div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            
+            <div class="bg-white p-6 rounded-lg shadow lg:col-span-2">
+                <h2 class="section-title">1. Manual Batch Entry</h2>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    
+                    <div class="input-group">
+                        <label>Date</label>
+                        <input type="date" id="date" class="input-field bg-gray-50">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>Lot No</label>
+                        <input type="text" id="lotNo" class="input-field" placeholder="e.g. 101">
+                    </div>
+
+                    <div class="input-group">
+                        <label>Process From</label>
+                        <select id="processSource" class="input-field">
+                            <option>Mill A</option>
+                            <option>Mill B</option>
+                            <option>Self</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group">
+                        <label>SKU No</label>
+                        <input type="text" id="sku" class="input-field">
+                    </div>
+
+                    <div class="input-group">
+                        <label>Quality</label>
+                        <input type="text" id="quality" class="input-field">
+                    </div>
+
+                    <div class="input-group">
+                        <label>Pana (Inch)</label>
+                        <input type="number" id="pana" class="input-field">
+                    </div>
+
+                    <div class="input-group">
+                        <label>Shade</label>
+                        <input type="text" id="shade" class="input-field">
+                    </div>
+
+                    <div class="input-group">
+                        <label>Sides</label>
+                        <select id="sides" class="input-field">
+                            <option>2 Side</option>
+                            <option>4 Side</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Type</label>
+                        <select id="type" class="input-field">
+                            <option>MRC</option>
+                            <option>NPN</option>
+                            <option>MRC-NPN</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Stitch</label>
+                        <select id="stitch" class="input-field">
+                            <option>Sadi</option>
+                            <option>Hem</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group col-span-2 md:col-span-1 bg-blue-50 p-2 rounded border border-blue-100">
+                        <label class="text-blue-800">Total Dozen</label>
+                        <input type="number" id="totalDozen" class="input-field border-blue-300" placeholder="Required">
+                    </div>
+
+                    <div class="input-group col-span-2 md:col-span-1 bg-blue-50 p-2 rounded border border-blue-100">
+                        <label class="text-blue-800">Total Meter</label>
+                        <input type="number" id="totalMeter" class="input-field border-blue-300" placeholder="Required">
+                    </div>
+                </div>
+
+                <div class="mt-4 p-3 bg-gray-50 border rounded text-sm">
+                    <label class="block mb-2 font-semibold">Meter Breakdown</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <input type="number" id="fresh" placeholder="Fresh" class="input-field">
+                        <input type="number" id="second" placeholder="Second" class="input-field">
+                        <input type="number" id="third" placeholder="Third (Faint)" class="input-field">
+                    </div>
+                    <p id="breakdownValidation" class="text-xs text-red-500 mt-1 hidden">Sum must equal Total Meter</p>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="section-title">2. Costing & Calc</h2>
+                <div class="space-y-3">
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="input-group">
+                            <label>Grey Meter</label>
+                            <input type="number" id="greyMeter" class="input-field bg-gray-100" readonly>
+                        </div>
+                        <div class="input-group">
+                            <label>Finish Meter</label>
+                            <input type="number" id="finishMeter" class="input-field border-blue-500">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="input-group">
+                            <label>Grey Rate</label>
+                            <input type="number" id="greyRate" class="input-field">
+                        </div>
+                        <div class="input-group">
+                            <label>Process Charge</label>
+                            <input type="number" id="processCharge" class="input-field">
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>Transportation</label>
+                        <input type="number" id="transport" class="input-field">
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="bg-yellow-50 p-3 rounded border border-yellow-200 space-y-2">
+                        <div class="flex justify-between text-sm">
+                            <span>Avg Consumption:</span>
+                            <span id="avgConsumption" class="font-bold">0</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span>Real Consumption:</span>
+                            <span id="realConsumption" class="font-bold">0</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span>Elongation (Mtr):</span>
+                            <span id="elongation" class="font-bold">0</span>
+                        </div>
+                        <div class="flex justify-between text-lg font-bold text-gray-800 mt-2 pt-2 border-t border-yellow-200">
+                            <span>Fabric Cost:</span>
+                            <span>₹ <span id="fabricCost">0</span></span>
+                        </div>
+                    </div>
+
+                    <button id="saveBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded mt-4 transition">
+                        SAVE RECORD
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="p-4 border-b flex justify-between items-center bg-gray-50">
+                <h3 class="font-bold text-gray-700">Database Records</h3>
+                <button id="exportBtn" class="text-sm bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">Export CSV</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left text-gray-600">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-100">
+                        <tr>
+                            <th class="px-4 py-3">Date</th>
+                            <th class="px-4 py-3">Lot No</th>
+                            <th class="px-4 py-3">SKU</th>
+                            <th class="px-4 py-3">Grey Mtr</th>
+                            <th class="px-4 py-3">Finish Mtr</th>
+                            <th class="px-4 py-3">Cost</th>
+                            <th class="px-4 py-3 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script type="module">
+        // 1. FIREBASE SETUP
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy } 
+        from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+        // YOUR CONFIGURATION (Embedded)
+        const firebaseConfig = {
+            apiKey: "AIzaSyCUA62QDHUqZ5NWUtikBSvOr1Mo1ioWg_Q",
+            authDomain: "textileapp-78ef7.firebaseapp.com",
+            projectId: "textileapp-78ef7",
+            storageBucket: "textileapp-78ef7.firebasestorage.app",
+            messagingSenderId: "752445805358",
+            appId: "1:752445805358:web:0a30890fa880b60215a0bf"
+        };
+
+        // Initialize
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const colRef = collection(db, "batches");
+
+        // 2. DOM ELEMENTS
+        const inputs = {
+            date: document.getElementById('date'),
+            lotNo: document.getElementById('lotNo'),
+            processSource: document.getElementById('processSource'),
+            sku: document.getElementById('sku'),
+            quality: document.getElementById('quality'),
+            pana: document.getElementById('pana'),
+            shade: document.getElementById('shade'),
+            sides: document.getElementById('sides'),
+            type: document.getElementById('type'),
+            stitch: document.getElementById('stitch'),
+            totalDozen: document.getElementById('totalDozen'),
+            totalMeter: document.getElementById('totalMeter'),
+            fresh: document.getElementById('fresh'),
+            second: document.getElementById('second'),
+            third: document.getElementById('third'),
+            greyMeter: document.getElementById('greyMeter'),
+            finishMeter: document.getElementById('finishMeter'),
+            greyRate: document.getElementById('greyRate'),
+            processCharge: document.getElementById('processCharge'),
+            transport: document.getElementById('transport')
+        };
+        
+        const displays = {
+            avgConsumption: document.getElementById('avgConsumption'),
+            realConsumption: document.getElementById('realConsumption'),
+            elongation: document.getElementById('elongation'),
+            fabricCost: document.getElementById('fabricCost')
+        };
+
+        // Set Default Date
+        inputs.date.valueAsDate = new Date();
+
+        // 3. CALCULATION LOGIC
+        function calculate() {
+            const totalMtr = parseFloat(inputs.totalMeter.value) || 0;
+            const totalDzn = parseFloat(inputs.totalDozen.value) || 0;
+            const finishMtr = parseFloat(inputs.finishMeter.value) || 0;
+            const greyRate = parseFloat(inputs.greyRate.value) || 0;
+
+            // Update Readonly Grey Meter
+            inputs.greyMeter.value = totalMtr;
+
+            // Formulas
+            // Avg Cons = Total Meter / Total Dozen
+            const avgCons = totalDzn > 0 ? (totalMtr / totalDzn).toFixed(2) : 0;
+            
+            // Real Cons = Finish Meter / Total Dozen
+            const realCons = totalDzn > 0 ? (finishMtr / totalDzn).toFixed(2) : 0;
+
+            // Elongation = Finish Meter - Grey Meter
+            const elong = (finishMtr - totalMtr).toFixed(2);
+
+            // Cost = Grey Meter * Grey Rate (As per request)
+            const cost = (totalMtr * greyRate).toFixed(2);
+
+            // Update UI
+            displays.avgConsumption.innerText = avgCons;
+            displays.realConsumption.innerText = realCons;
+            displays.elongation.innerText = elong;
+            displays.fabricCost.innerText = cost;
+        }
+
+        // Attach Listeners
+        ['totalMeter', 'totalDozen', 'finishMeter', 'greyRate'].forEach(id => {
+            document.getElementById(id).addEventListener('input', calculate);
+        });
+
+        // 4. SAVE TO DATABASE
+        document.getElementById('saveBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('saveBtn');
+            btn.innerText = "Saving...";
+            
+            try {
+                // Gather Data
+                const data = {
+                    date: inputs.date.value,
+                    lotNo: inputs.lotNo.value,
+                    processSource: inputs.processSource.value,
+                    sku: inputs.sku.value,
+                    quality: inputs.quality.value,
+                    pana: inputs.pana.value,
+                    shade: inputs.shade.value,
+                    sides: inputs.sides.value,
+                    type: inputs.type.value,
+                    stitch: inputs.stitch.value,
+                    totalDozen: parseFloat(inputs.totalDozen.value),
+                    totalMeter: parseFloat(inputs.totalMeter.value),
+                    breakdown: {
+                        fresh: inputs.fresh.value,
+                        second: inputs.second.value,
+                        third: inputs.third.value
+                    },
+                    costing: {
+                        finishMeter: parseFloat(inputs.finishMeter.value),
+                        greyRate: parseFloat(inputs.greyRate.value),
+                        processCharge: parseFloat(inputs.processCharge.value),
+                        transport: parseFloat(inputs.transport.value),
+                        calculatedCost: parseFloat(displays.fabricCost.innerText),
+                        elongation: parseFloat(displays.elongation.innerText)
+                    },
+                    timestamp: new Date()
+                };
+
+                await addDoc(colRef, data);
+                alert("Batch Saved Successfully!");
+                
+                // Clear Form (Optional: Keep Date)
+                inputs.lotNo.value = "";
+                inputs.totalMeter.value = "";
+                inputs.finishMeter.value = "";
+                calculate(); // Reset calcs
+
+            } catch (e) {
+                console.error("Error adding document: ", e);
+                alert("Error saving: " + e.message);
+            }
+            btn.innerText = "SAVE RECORD";
+        });
+
+        // 5. LOAD DATABASE (Real-time)
+        const q = query(colRef, orderBy("date", "desc"));
+        onSnapshot(q, (snapshot) => {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = "";
+            
+            snapshot.docs.forEach(docSnap => {
+                const item = docSnap.data();
+                const tr = document.createElement('tr');
+                tr.className = "border-b bg-white hover:bg-gray-50";
+                
+                tr.innerHTML = `
+                    <td class="px-4 py-3">${item.date}</td>
+                    <td class="px-4 py-3 font-bold text-gray-900">${item.lotNo}</td>
+                    <td class="px-4 py-3">${item.sku || '-'}</td>
+                    <td class="px-4 py-3">${item.totalMeter}</td>
+                    <td class="px-4 py-3">${item.costing?.finishMeter || '-'}</td>
+                    <td class="px-4 py-3 text-green-600 font-bold">₹${item.costing?.calculatedCost}</td>
+                    <td class="px-4 py-3 text-right">
+                        <button class="text-red-600 hover:text-red-900 text-xs uppercase font-bold delete-btn" data-id="${docSnap.id}">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Attach Delete Listeners
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    if(confirm("Are you sure you want to delete this batch?")) {
+                        await deleteDoc(doc(db, "batches", e.target.getAttribute('data-id')));
+                    }
+                });
+            });
+        });
+
+        // 6. EXPORT TO CSV
+        document.getElementById('exportBtn').addEventListener('click', () => {
+            let csv = "Date,LotNo,Process,SKU,Quality,TotalMeter,FinishMeter,Cost\n";
+            document.querySelectorAll('#tableBody tr').forEach(row => {
+                const cols = row.querySelectorAll('td');
+                if(cols.length > 0) {
+                    const rowData = [
+                        cols[0].innerText, // Date
+                        cols[1].innerText, // Lot
+                        cols[2].innerText, // SKU
+                        cols[3].innerText, // Grey
+                        cols[4].innerText, // Finish
+                        cols[5].innerText.replace('₹', ''), // Cost
+                    ];
+                    csv += rowData.join(",") + "\n";
+                }
+            });
+            
+            const hiddenElement = document.createElement('a');
+            hiddenElement.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv);
+            hiddenElement.target = '_blank';
+            hiddenElement.download = 'Textile_Data.csv';
+            hiddenElement.click();
+        });
+    </script>
+</body>
+</html>
